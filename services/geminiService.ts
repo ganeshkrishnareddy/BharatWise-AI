@@ -1,11 +1,22 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { ChatMessage, JobPosting, QuizQuestion } from "../types";
 
-// Initialize Gemini client
-// Fix: Use process.env.API_KEY directly as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const MODEL_NAME = 'gemini-2.5-flash';
+
+// Helper to safely get the AI client only when needed.
+// This prevents "ReferenceError: process is not defined" crashes during page load.
+const getAiClient = () => {
+  let apiKey = '';
+  try {
+    // Safely check if process.env exists
+    if (typeof process !== 'undefined' && process.env) {
+      apiKey = process.env.API_KEY || '';
+    }
+  } catch (e) {
+    console.warn("Could not access process.env.API_KEY");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 /**
  * Generates a response for a general chat conversation.
@@ -15,6 +26,7 @@ export const generateChatResponse = async (
   newMessage: string
 ): Promise<string> => {
   try {
+    const ai = getAiClient();
     const chat = ai.chats.create({
       model: MODEL_NAME,
       config: {
@@ -35,6 +47,7 @@ export const generateChatResponse = async (
  */
 export const generateStudyNotes = async (subject: string, topic: string, level: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Act as an expert professor. Create detailed, easy-to-understand study notes for:
       Subject: ${subject}
@@ -68,6 +81,7 @@ export const generateStudyNotes = async (subject: string, topic: string, level: 
  */
 export const generateCareerAdvice = async (role: string, skills: string, experience: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       You are a top-tier career coach in India.
       A user is looking for a role as a: ${role}
@@ -100,6 +114,7 @@ export const generateCareerAdvice = async (role: string, skills: string, experie
  */
 export const fetchJobListings = async (category: 'Govt' | 'Private' | 'Both'): Promise<JobPosting[]> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Using Google Search, find at least 10 recent and active ${category} job postings in India suitable for students or freshers.
       Focus on jobs posted in the last 7 days.
@@ -151,6 +166,7 @@ export const fetchJobListings = async (category: 'Govt' | 'Private' | 'Both'): P
  */
 export const generateExamQuestions = async (exam: string, topic: string, difficulty: string, count: number): Promise<QuizQuestion[]> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Create a mini-mock test for the exam: ${exam}
       Focus Topic: ${topic}
@@ -198,6 +214,7 @@ export const generateExamQuestions = async (exam: string, topic: string, difficu
 
 export const generateRoadmap = async (goal: string, duration: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Create a detailed learning roadmap for: ${goal}
       Duration: ${duration}
@@ -217,6 +234,7 @@ export const generateRoadmap = async (goal: string, duration: string): Promise<s
 
 export const generateEssay = async (topic: string, tone: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Write a comprehensive essay on: ${topic}
       Tone: ${tone}
@@ -232,6 +250,7 @@ export const generateEssay = async (topic: string, tone: string): Promise<string
 
 export const generateProject = async (techStack: string, idea: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Act as a Senior Software Architect. I need a project plan.
       Idea/Theme: ${idea}
@@ -252,6 +271,7 @@ export const generateProject = async (techStack: string, idea: string): Promise<
 
 export const debugCode = async (code: string, error: string): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = `
       Fix the following code.
       Error (if any): ${error}
@@ -270,6 +290,7 @@ export const debugCode = async (code: string, error: string): Promise<string> =>
 
 export const summarizeText = async (text: string, mode: 'summary' | 'notes'): Promise<string> => {
   try {
+    const ai = getAiClient();
     const prompt = mode === 'summary' 
       ? `Summarize the following text concisely in bullet points:\n\n${text}`
       : `Convert the following lecture transcript/text into structured study notes with headings and key points:\n\n${text}`;
