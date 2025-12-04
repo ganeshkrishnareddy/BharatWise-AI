@@ -8,6 +8,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
+      // Polyfill for process.env to prevent "process is not defined" crash in browser
+      window.process = {
+        env: {
+          NODE_ENV: 'production',
+          API_KEY: '' // This will be populated by your build tool or remain empty to be handled safely
+        }
+      };
+      
       tailwind.config = {
         theme: {
           extend: {
@@ -55,5 +63,7 @@
 </head>
   <body class="bg-slate-50 text-slate-900 antialiased">
     <div id="root"></div>
+    <!-- Entry Point for the React Application -->
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
