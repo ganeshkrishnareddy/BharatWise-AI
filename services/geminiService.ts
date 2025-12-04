@@ -1,10 +1,9 @@
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { ChatMessage, JobPosting, QuizQuestion } from "../types";
 
-const apiKey = process.env.API_KEY || '';
-
 // Initialize Gemini client
-const ai = new GoogleGenAI({ apiKey });
+// Fix: Use process.env.API_KEY directly as per guidelines
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
