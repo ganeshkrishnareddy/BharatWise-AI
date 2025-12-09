@@ -13,7 +13,6 @@ interface ErrorBoundaryState {
 
 // Error Boundary to catch runtime errors and prevent white screens
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  // Fix: Use property initializer for state to avoid constructor type conflicts
   public state: ErrorBoundaryState = {
     hasError: false,
     error: null

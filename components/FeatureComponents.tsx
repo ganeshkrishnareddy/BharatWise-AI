@@ -1,58 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  generateStudyNotes, 
-  generateCareerAdvice, 
-  generateExamQuestions,
-  generateRoadmap,
-  generateEssay,
-  generateProject,
-  debugCode,
-  summarizeText,
-  fetchJobListings
-} from '../services/geminiService';
-import { JobPosting, QuizQuestion } from '../types';
-import { 
-  Loader2, BookOpen, Briefcase, GraduationCap, Copy, Check, FileText, 
-  Calculator, Plus, Trash2, Map, PenTool, Bug, FileOutput, ArrowLeft,
-  CalendarCheck, UserCheck, AlertCircle, Bell, RefreshCw, Building2, Landmark,
-  ExternalLink, ChevronRight, RotateCcw
+  CalendarCheck, UserCheck, AlertCircle, Plus, Trash2, 
+  Check, ListTodo, StickyNote, Save, Clock, X, Circle, CheckCircle, Loader2
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-
-const ResponseDisplay = ({ content }: { content: string }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  if (!content) return null;
-
-  return (
-    <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden animate-fade-in">
-      <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex justify-between items-center">
-        <span className="text-sm font-semibold text-slate-600">AI Generated Result</span>
-        <button 
-          onClick={handleCopy}
-          className="text-slate-500 hover:text-primary transition-colors flex items-center gap-1 text-xs uppercase font-bold tracking-wider"
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-      <div className="p-6 overflow-auto max-h-[500px] bg-white">
-        <article className="prose prose-slate max-w-none prose-headings:text-slate-800 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900 prose-strong:font-bold">
-          <ReactMarkdown>{content}</ReactMarkdown>
-        </article>
-      </div>
-    </div>
-  );
-};
+import { Task, Note } from '../types';
+import { storageService } from '../services/storage';
 
 // --- Attendance Tool ---
-const AttendanceTool = () => {
+export const AttendanceTool = () => {
   const [total, setTotal] = useState('');
   const [attended, setAttended] = useState('');
   const [target, setTarget] = useState('75');
@@ -91,7 +46,7 @@ const AttendanceTool = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto animate-fade-in">
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
@@ -269,14 +224,26 @@ export const CgpaCalculator = () => {
 
   return (
     <div className="max-w-4xl mx-auto animate-fade-in">
+       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+            <Check size={32} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">CGPA Calculator</h2>
+            <p className="text-emerald-100">Track your grades and predict future scores.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200 mb-6">
         <button
           onClick={() => setActiveTab('calculator')}
           className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
             activeTab === 'calculator'
-              ? 'bg-green-100 text-green-700 shadow-sm'
-              : 'text-slate-600 hover:text-green-600 hover:bg-green-50'
+              ? 'bg-emerald-100 text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50'
           }`}
         >
           CGPA Calculator
@@ -285,8 +252,8 @@ export const CgpaCalculator = () => {
           onClick={() => setActiveTab('predictor')}
           className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all ${
             activeTab === 'predictor'
-              ? 'bg-green-100 text-green-700 shadow-sm'
-              : 'text-slate-600 hover:text-green-600 hover:bg-green-50'
+              ? 'bg-emerald-100 text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50'
           }`}
         >
           Grade Predictor
@@ -440,7 +407,7 @@ export const CgpaCalculator = () => {
             
             <button 
               onClick={calculatePrediction}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-md hover:shadow-lg"
             >
               Calculate Required GPA
             </button>
@@ -457,792 +424,305 @@ export const CgpaCalculator = () => {
   );
 };
 
-// --- New AI Tools Components ---
+// --- Task Manager ---
+export const TaskManager = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newTask, setNewTask] = useState('');
+  const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
 
-const SimpleToolForm = ({ 
-  title, 
-  icon: Icon, 
-  color, 
-  fields, 
-  onSubmit, 
-  result, 
-  loading 
-}: any) => {
-  const [inputs, setInputs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    loadTasks();
+  }, []);
 
-  return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
-       <div className={`bg-gradient-to-r ${color} rounded-2xl p-8 text-white mb-8 shadow-lg`}>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <Icon className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">{title}</h2>
-            <p className="text-white/90 opacity-90">Powered by AI</p>
-          </div>
-        </div>
-      </div>
-
-      <form 
-        onSubmit={(e) => { e.preventDefault(); onSubmit(inputs); }}
-        className="bg-white p-6 rounded-xl shadow-md border border-slate-100 space-y-4"
-      >
-        {fields.map((field: any) => (
-          <div key={field.key}>
-            <label className="block text-sm font-medium text-slate-700 mb-1">{field.label}</label>
-            {field.type === 'textarea' ? (
-              <textarea
-                required={field.required}
-                rows={field.rows || 4}
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none resize-none font-mono text-sm"
-                placeholder={field.placeholder}
-                value={inputs[field.key] || ''}
-                onChange={e => setInputs({...inputs, [field.key]: e.target.value})}
-              />
-            ) : (
-              <input
-                type={field.type || 'text'}
-                required={field.required}
-                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                placeholder={field.placeholder}
-                value={inputs[field.key] || ''}
-                onChange={e => setInputs({...inputs, [field.key]: e.target.value})}
-              />
-            )}
-          </div>
-        ))}
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-lg transition-all flex justify-center items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-70"
-        >
-          {loading ? <Loader2 className="animate-spin" /> : <Icon size={20} />}
-          {loading ? 'Generating...' : `Generate ${title.split(' ')[0]}`}
-        </button>
-      </form>
-      
-      <ResponseDisplay content={result} />
-    </div>
-  );
-};
-
-export const AiToolsDashboard = () => {
-  const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
-
-  const tools = [
-    { id: 'attendance', name: 'Attendance Calc', icon: CalendarCheck, color: 'bg-purple-500', desc: 'Track attendance & safe bunks.' },
-    { id: 'roadmap', name: 'Roadmaps', icon: Map, color: 'bg-indigo-500', desc: 'Step-by-step learning paths.' },
-    { id: 'cgpa', name: 'CGPA Calc', icon: Calculator, color: 'bg-green-500', desc: 'Calculate & predict grades.' },
-    { id: 'essay', name: 'Essay Writer', icon: PenTool, color: 'bg-pink-500', desc: 'Drafts essays on any topic.' },
-    { id: 'project', name: 'Project Builder', icon: FileOutput, color: 'bg-blue-500', desc: 'Plan apps & folder structures.' },
-    { id: 'debug', name: 'Code Debugger', icon: Bug, color: 'bg-red-500', desc: 'Fix errors & explain logic.' },
-    { id: 'summary', name: 'Summarizer', icon: FileText, color: 'bg-amber-500', desc: 'Summarize text or notes.' },
-    { id: 'notes', name: 'Lecture Notes', icon: BookOpen, color: 'bg-teal-500', desc: 'Convert transcript to notes.' },
-  ];
-
-  const handleToolSubmit = async (toolId: string, data: any) => {
+  const loadTasks = async () => {
     setLoading(true);
-    setResult('');
     try {
-      let res = '';
-      switch (toolId) {
-        case 'roadmap': res = await generateRoadmap(data.goal, data.duration); break;
-        case 'essay': res = await generateEssay(data.topic, data.tone || 'Academic'); break;
-        case 'project': res = await generateProject(data.stack, data.idea); break;
-        case 'debug': res = await debugCode(data.code, data.error); break;
-        case 'summary': res = await summarizeText(data.text, 'summary'); break;
-        case 'notes': res = await summarizeText(data.text, 'notes'); break;
-      }
-      setResult(res);
+      const data = await storageService.getTasks();
+      setTasks(data);
     } catch (e) {
-      setResult("Error generating content. Please try again.");
+      console.error("Failed to load tasks", e);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!activeTool) {
-    return (
-      <div className="max-w-5xl mx-auto animate-fade-in">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold text-slate-800">AI Productivity Tools</h2>
-          <p className="text-slate-600 mt-2">Select a tool to boost your productivity</p>
+  const addTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTask.trim()) return;
+    
+    const task: Task = {
+      id: Date.now().toString(),
+      text: newTask,
+      completed: false,
+      priority,
+      createdAt: Date.now()
+    };
+
+    setTasks(prev => [task, ...prev]); // Optimistic update
+    setNewTask('');
+    await storageService.saveTask(task);
+    loadTasks(); // Refresh to sync
+  };
+
+  const toggleTask = async (task: Task) => {
+    const updated = { ...task, completed: !task.completed };
+    setTasks(tasks.map(t => t.id === task.id ? updated : t)); // Optimistic
+    await storageService.saveTask(updated);
+  };
+
+  const deleteTask = async (id: string) => {
+    setTasks(tasks.filter(t => t.id !== id)); // Optimistic
+    await storageService.deleteTask(id);
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto animate-fade-in">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+            <ListTodo className="w-8 h-8 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">Task Manager</h2>
+            <p className="text-blue-100">Organize your assignments and study goals.</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tools.map(tool => (
-            <div 
-              key={tool.id}
-              onClick={() => setActiveTool(tool.id)}
-              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all cursor-pointer group"
-            >
-              <div className={`w-12 h-12 ${tool.color.replace('bg-', 'bg-').replace('500', '100')} rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition`}>
-                <tool.icon className={`w-6 h-6 ${tool.color.replace('bg-', 'text-')}`} />
+      </div>
+
+      <div className="bg-white p-6 rounded-xl shadow-md border border-slate-100 mb-6">
+        <form onSubmit={addTask} className="flex flex-col md:flex-row gap-3">
+          <input 
+            type="text"
+            className="flex-grow p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            placeholder="Add a new task..."
+            value={newTask}
+            onChange={e => setNewTask(e.target.value)}
+          />
+          <select 
+            className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+            value={priority}
+            onChange={(e: any) => setPriority(e.target.value)}
+          >
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+          <button 
+            type="submit"
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition-colors disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : 'Add Task'}
+          </button>
+        </form>
+      </div>
+
+      <div className="space-y-3">
+        {loading && tasks.length === 0 && (
+          <div className="text-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-500" />
+            <p className="text-slate-400 mt-2">Loading tasks...</p>
+          </div>
+        )}
+        
+        {!loading && tasks.length === 0 && (
+          <div className="text-center text-slate-500 py-8 bg-white rounded-xl border border-slate-200 border-dashed">
+            No tasks yet. Start planning your success!
+          </div>
+        )}
+
+        {tasks.sort((a, b) => b.createdAt - a.createdAt).map(task => (
+          <div key={task.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${task.completed ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => toggleTask(task)}
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 text-transparent hover:border-green-500'}`}
+              >
+                <Check size={14} />
+              </button>
+              <div>
+                <p className={`font-medium ${task.completed ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
+                  {task.text}
+                </p>
+                <div className="flex gap-2 items-center text-xs mt-1">
+                  <span className={`px-2 py-0.5 rounded-full ${
+                    task.priority === 'High' ? 'bg-red-100 text-red-700' : 
+                    task.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 
+                    'bg-green-100 text-green-700'
+                  }`}>
+                    {task.priority}
+                  </span>
+                  <span className="text-slate-400">{new Date(task.createdAt).toLocaleDateString()}</span>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-slate-900">{tool.name}</h3>
-              <p className="text-sm text-slate-500 mt-1">{tool.desc}</p>
+            </div>
+            <button 
+              onClick={() => deleteTask(task.id)}
+              className="text-slate-400 hover:text-red-500 p-2"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- Quick Notes ---
+export const QuickNotes = () => {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  
+  // Editor State
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  
+  // Debounce saving
+  const saveTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  const loadNotes = async () => {
+    setLoading(true);
+    try {
+      const data = await storageService.getNotes();
+      setNotes(data);
+    } catch(e) { console.error(e); } 
+    finally { setLoading(false); }
+  };
+
+  const createNote = () => {
+    const newNote = {
+      id: Date.now().toString(),
+      title: 'Untitled Note',
+      content: '',
+      updatedAt: Date.now()
+    };
+    setNotes([newNote, ...notes]);
+    setActiveNoteId(newNote.id);
+    setTitle(newNote.title);
+    setContent(newNote.content);
+    storageService.saveNote(newNote); // Save immediately
+  };
+
+  const selectNote = (note: Note) => {
+    setActiveNoteId(note.id);
+    setTitle(note.title);
+    setContent(note.content);
+  };
+
+  const handleSave = () => {
+    if (!activeNoteId) return;
+    
+    const updatedNote = {
+      id: activeNoteId,
+      title,
+      content,
+      updatedAt: Date.now()
+    };
+
+    setNotes(notes.map(n => n.id === activeNoteId ? updatedNote : n));
+    storageService.saveNote(updatedNote);
+  };
+
+  const deleteNote = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setNotes(notes.filter(n => n.id !== id));
+    if (activeNoteId === id) {
+      setActiveNoteId(null);
+      setTitle('');
+      setContent('');
+    }
+    await storageService.deleteNote(id);
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto h-[calc(100vh-140px)] flex gap-6 animate-fade-in">
+      {/* Sidebar List */}
+      <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+          <h3 className="font-bold text-slate-700 flex items-center gap-2">
+            <StickyNote size={20} className="text-amber-500"/> My Notes
+          </h3>
+          <button 
+            onClick={createNote}
+            className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-lg transition-colors"
+          >
+            <Plus size={20} />
+          </button>
+        </div>
+        <div className="flex-grow overflow-y-auto p-2 space-y-1">
+          {loading && <div className="text-center p-4 text-slate-400"><Loader2 className="animate-spin inline" /></div>}
+          
+          {!loading && notes.length === 0 && (
+            <div className="text-center text-slate-400 p-8 text-sm">No notes created yet.</div>
+          )}
+          
+          {notes.map(note => (
+            <div 
+              key={note.id}
+              onClick={() => selectNote(note)}
+              className={`p-3 rounded-lg cursor-pointer group flex justify-between items-start ${activeNoteId === note.id ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent'}`}
+            >
+              <div>
+                <h4 className={`font-semibold text-sm truncate w-32 ${activeNoteId === note.id ? 'text-amber-800' : 'text-slate-700'}`}>{note.title}</h4>
+                <p className="text-xs text-slate-400 mt-1">{new Date(note.updatedAt).toLocaleDateString()}</p>
+              </div>
+              <button 
+                onClick={(e) => deleteNote(e, note.id)}
+                className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X size={16} />
+              </button>
             </div>
           ))}
         </div>
       </div>
-    );
-  }
 
-  // Render Specific Tool
-  if (activeTool === 'cgpa') {
-    return (
-      <div className="space-y-4">
-        <button onClick={() => setActiveTool(null)} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium px-4">
-          <ArrowLeft size={18} /> Back to Tools
-        </button>
-        <CgpaCalculator />
-      </div>
-    );
-  }
-  
-  if (activeTool === 'attendance') {
-     return (
-      <div className="space-y-4">
-        <button onClick={() => setActiveTool(null)} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium px-4">
-          <ArrowLeft size={18} /> Back to Tools
-        </button>
-        <AttendanceTool />
-      </div>
-    );
-  }
-
-  const toolConfig: any = {
-    roadmap: {
-      title: 'Learning Roadmap Generator', icon: Map, color: 'from-indigo-600 to-blue-600',
-      fields: [
-        { key: 'goal', label: 'What do you want to learn?', placeholder: 'e.g. Become a Full Stack Developer', required: true },
-        { key: 'duration', label: 'Time available?', placeholder: 'e.g. 3 months, 2 hours/day', required: true }
-      ]
-    },
-    essay: {
-      title: 'Smart Essay Writer', icon: PenTool, color: 'from-pink-600 to-rose-600',
-      fields: [
-        { key: 'topic', label: 'Essay Topic', placeholder: 'e.g. Impact of AI on Education', required: true },
-        { key: 'tone', label: 'Writing Tone', placeholder: 'e.g. Academic, Persuasive, Casual' }
-      ]
-    },
-    project: {
-      title: 'AI Project Architect', icon: FileOutput, color: 'from-blue-600 to-cyan-600',
-      fields: [
-        { key: 'idea', label: 'Project Idea', placeholder: 'e.g. E-commerce app for local artisans', required: true },
-        { key: 'stack', label: 'Tech Stack', placeholder: 'e.g. React, Node.js, MongoDB', required: true }
-      ]
-    },
-    debug: {
-      title: 'Code Debugger', icon: Bug, color: 'from-red-600 to-orange-600',
-      fields: [
-        { key: 'code', label: 'Paste Code Snippet', type: 'textarea', placeholder: '// Your code here...', required: true, rows: 8 },
-        { key: 'error', label: 'Error Message (Optional)', placeholder: 'e.g. undefined is not a function' }
-      ]
-    },
-    summary: {
-      title: 'Text Summarizer', icon: FileText, color: 'from-amber-500 to-yellow-600',
-      fields: [
-        { key: 'text', label: 'Text to Summarize', type: 'textarea', placeholder: 'Paste article or paragraph...', required: true, rows: 10 }
-      ]
-    },
-    notes: {
-      title: 'Lecture Notes Generator', icon: BookOpen, color: 'from-teal-500 to-emerald-600',
-      fields: [
-        { key: 'text', label: 'Lecture Transcript', type: 'textarea', placeholder: 'Paste lecture transcript here...', required: true, rows: 10 }
-      ]
-    }
-  };
-
-  const config = toolConfig[activeTool];
-
-  return (
-    <div className="space-y-4">
-      <button onClick={() => { setActiveTool(null); setResult(''); }} className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-medium px-4">
-        <ArrowLeft size={18} /> Back to Tools
-      </button>
-      <SimpleToolForm 
-        {...config}
-        loading={loading}
-        result={result}
-        onSubmit={(data: any) => handleToolSubmit(activeTool, data)}
-      />
-    </div>
-  );
-};
-
-// --- Study Hub Component ---
-export const StudyHub = () => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState('');
-  const [formData, setFormData] = useState({ subject: '', topic: '', level: 'University' });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setResult('');
-    try {
-      const data = await generateStudyNotes(formData.subject, formData.topic, formData.level);
-      setResult(data);
-    } catch (err) {
-      setResult("Error generating notes. Please check your connection.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white mb-8 shadow-lg">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <BookOpen className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">Smart Study Notes</h2>
-            <p className="text-blue-100">Get concise, structured notes for any subject instantly.</p>
-          </div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
-          <input 
-            type="text" 
-            required
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-            placeholder="e.g. Physics, History, Computer Science"
-            value={formData.subject}
-            onChange={e => setFormData({...formData, subject: e.target.value})}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Specific Topic</label>
-          <input 
-            type="text" 
-            required
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="e.g. Thermodynamics, Mughal Empire"
-            value={formData.topic}
-            onChange={e => setFormData({...formData, topic: e.target.value})}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
-          <select 
-            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-            value={formData.level}
-            onChange={e => setFormData({...formData, level: e.target.value})}
-          >
-            <option>Class 9-10 (CBSE/ICSE)</option>
-            <option>Class 11-12 (Science)</option>
-            <option>Class 11-12 (Commerce/Arts)</option>
-            <option>University / College</option>
-            <option>Competitive Exam Prep</option>
-          </select>
-        </div>
-        <div className="md:col-span-2 mt-2">
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all flex justify-center items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-70"
-          >
-            {loading ? <Loader2 className="animate-spin" /> : <BookOpen size={20} />}
-            {loading ? 'Generating Notes...' : 'Generate Notes'}
-          </button>
-        </div>
-      </form>
-
-      <ResponseDisplay content={result} />
-    </div>
-  );
-};
-
-// --- Exam Prep Component ---
-export const ExamPrep = () => {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ exam: '', topic: '', difficulty: 'Medium' });
-  const [questionCount, setQuestionCount] = useState(5);
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [quizStarted, setQuizStarted] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setQuestions([]);
-    try {
-      const data = await generateExamQuestions(formData.exam, formData.topic, formData.difficulty, questionCount);
-      setQuestions(data);
-      if (data.length > 0) {
-        setQuizStarted(true);
-        setCurrentQuestionIndex(0);
-        setScore(0);
-        resetQuestionState();
-      } else {
-        alert("Could not generate questions. Please try again.");
-      }
-    } catch (err) {
-      alert("Error generating questions. Please check your connection.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetQuestionState = () => {
-    setSelectedOption(null);
-    setIsAnswered(false);
-  };
-
-  const handleOptionSelect = (index: number) => {
-    if (isAnswered) return;
-    setSelectedOption(index);
-    setIsAnswered(true);
-    if (index === questions[currentQuestionIndex].correctAnswerIndex) {
-      setScore(s => s + 1);
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      resetQuestionState();
-    } else {
-      // End of quiz
-      setCurrentQuestionIndex(prev => prev + 1);
-    }
-  };
-
-  const resetQuiz = () => {
-    setQuizStarted(false);
-    setQuestions([]);
-    setScore(0);
-    setCurrentQuestionIndex(0);
-    resetQuestionState();
-  };
-
-  const getGradeInfo = (score: number, total: number) => {
-    if (total === 0) return { grade: 'I', label: 'Incomplete', color: 'text-slate-500' };
-    const percentage = Math.round((score / total) * 100);
-
-    if (percentage === 100) return { grade: 'O', label: 'Outstanding', color: 'text-emerald-600' };
-    if (percentage >= 90) return { grade: 'A+', label: 'Excellent', color: 'text-green-600' };
-    if (percentage >= 80) return { grade: 'A', label: 'Very Good', color: 'text-lime-600' };
-    if (percentage >= 70) return { grade: 'B+', label: 'Good', color: 'text-yellow-600' };
-    if (percentage >= 60) return { grade: 'B', label: 'Above Average', color: 'text-amber-600' };
-    if (percentage >= 50) return { grade: 'C', label: 'Average', color: 'text-orange-500' };
-    if (percentage >= 40) return { grade: 'D', label: 'Marginal', color: 'text-orange-600' };
-    return { grade: 'F', label: 'Fail', color: 'text-red-600' };
-  };
-
-  return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <GraduationCap className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">Exam Prep & Mock Tests</h2>
-            <p className="text-amber-100">Practice for JEE, NEET, UPSC, SSC, or University Exams.</p>
-          </div>
-        </div>
-      </div>
-
-      {!quizStarted ? (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-md border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
-          <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Exam Name</label>
-            <input 
-              type="text" 
-              required
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
-              placeholder="e.g. JEE Mains, UPSC, Semester Final"
-              value={formData.exam}
-              onChange={e => setFormData({...formData, exam: e.target.value})}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Difficulty</label>
-            <select 
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
-              value={formData.difficulty}
-              onChange={e => setFormData({...formData, difficulty: e.target.value})}
-            >
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Topic / Subject</label>
-            <input 
-              type="text" 
-              required
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none"
-              placeholder="e.g. Organic Chemistry, Indian Polity, Data Structures"
-              value={formData.topic}
-              onChange={e => setFormData({...formData, topic: e.target.value})}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Number of Questions</label>
-            <select 
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none bg-white"
-              value={questionCount}
-              onChange={e => setQuestionCount(parseInt(e.target.value))}
-            >
-              <option value={5}>5 Questions</option>
-              <option value={10}>10 Questions</option>
-              <option value={15}>15 Questions</option>
-              <option value={20}>20 Questions</option>
-            </select>
-          </div>
-
-          <div className="md:col-span-2 mt-2">
-            <button 
-              type="submit" 
-              disabled={loading}
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 rounded-lg transition-all flex justify-center items-center gap-2 shadow-md hover:shadow-lg disabled:opacity-70"
-            >
-              {loading ? <Loader2 className="animate-spin" /> : <GraduationCap size={20} />}
-              {loading ? 'Generating Questions...' : 'Create Mock Test'}
-            </button>
-          </div>
-        </form>
-      ) : (
-        <div className="space-y-6 animate-fade-in">
-          {currentQuestionIndex < questions.length ? (
-            <>
-              {/* Progress Bar */}
-              <div className="w-full bg-slate-200 rounded-full h-2.5 mb-4">
-                <div 
-                  className="bg-amber-500 h-2.5 rounded-full transition-all duration-300" 
-                  style={{ width: `${((currentQuestionIndex + 1) / questions.length) * 100}%` }}
-                ></div>
+      {/* Editor Area */}
+      <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+        {activeNoteId ? (
+          <>
+            <div className="p-4 border-b border-slate-100 flex gap-4 items-center">
+              <input 
+                type="text"
+                className="flex-grow text-xl font-bold text-slate-800 outline-none bg-transparent"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                onBlur={handleSave}
+                placeholder="Note Title"
+              />
+              <div className="text-xs text-slate-400 flex items-center gap-1">
+                <Clock size={12} /> {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </div>
-
-              {/* Question Card */}
-              <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
-                <div className="bg-slate-50 p-6 border-b border-slate-100">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-sm font-bold text-amber-600 uppercase tracking-wide">Question {currentQuestionIndex + 1} of {questions.length}</span>
-                    <span className="text-sm font-medium text-slate-500">Score: {score}</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-900 leading-snug">{questions[currentQuestionIndex].question}</h3>
-                </div>
-
-                <div className="p-6 space-y-3">
-                   {questions[currentQuestionIndex].options.map((option, idx) => {
-                     let btnClass = "w-full p-4 text-left border rounded-lg transition-all font-medium text-slate-700 hover:bg-slate-50 border-slate-200";
-                     
-                     if (isAnswered) {
-                        if (idx === questions[currentQuestionIndex].correctAnswerIndex) {
-                          btnClass = "w-full p-4 text-left border rounded-lg font-medium bg-green-50 border-green-500 text-green-700";
-                        } else if (idx === selectedOption) {
-                          btnClass = "w-full p-4 text-left border rounded-lg font-medium bg-red-50 border-red-500 text-red-700";
-                        } else {
-                          btnClass = "w-full p-4 text-left border rounded-lg font-medium text-slate-400 border-slate-100 opacity-60";
-                        }
-                     }
-
-                     return (
-                       <button
-                         key={idx}
-                         onClick={() => handleOptionSelect(idx)}
-                         disabled={isAnswered}
-                         className={btnClass}
-                       >
-                         <span className="font-bold mr-2">{String.fromCharCode(65 + idx)}.</span> {option}
-                       </button>
-                     );
-                   })}
-                </div>
-
-                {isAnswered && (
-                  <div className="px-6 pb-6 animate-fade-in">
-                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg mb-4">
-                      <h4 className="font-bold text-blue-800 mb-1">Explanation:</h4>
-                      <p className="text-blue-700 text-sm">{questions[currentQuestionIndex].explanation}</p>
-                    </div>
-                    <button 
-                      onClick={nextQuestion}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold flex justify-center items-center gap-2 transition-all"
-                    >
-                      {currentQuestionIndex === questions.length - 1 ? "View Results" : "Next Question"} <ChevronRight size={20} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            // Results Card
-            <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-8 text-center animate-fade-in">
-               <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                 <GraduationCap size={40} />
-               </div>
-               <h2 className="text-3xl font-bold text-slate-900 mb-2">Quiz Completed!</h2>
-               
-               <div className="mb-8">
-                 <div className="text-6xl font-bold text-slate-800 mb-2">{Math.round((score / questions.length) * 100)}%</div>
-                 <div className={`text-2xl font-bold ${getGradeInfo(score, questions.length).color}`}>
-                   Grade {getGradeInfo(score, questions.length).grade}: {getGradeInfo(score, questions.length).label}
-                 </div>
-                 <p className="text-slate-500 mt-2">You scored {score} out of {questions.length}</p>
-               </div>
-               
-               <div className="flex justify-center gap-4">
-                 <button 
-                  onClick={resetQuiz}
-                  className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold flex items-center gap-2 transition-all"
-                 >
-                   <RotateCcw size={18} /> Take New Quiz
-                 </button>
-               </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-// --- Career Coach Component ---
-export const CareerCoach = () => {
-  const [loading, setLoading] = useState(false);
-  const [adviceResult, setAdviceResult] = useState('');
-  const [activeTab, setActiveTab] = useState<'advice' | 'jobs'>('jobs');
-  const [jobList, setJobList] = useState<JobPosting[]>([]);
-  const [isJobLoading, setIsJobLoading] = useState(false);
-  const [jobCategory, setJobCategory] = useState<'Govt' | 'Private' | 'Both'>('Both');
-  
-  const [formData, setFormData] = useState({ 
-    role: '', 
-    skills: '', 
-    experience: 'Fresher' 
-  });
-
-  const handleAdviceSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setAdviceResult('');
-    setActiveTab('advice');
-    try {
-      const data = await generateCareerAdvice(formData.role, formData.skills, formData.experience);
-      setAdviceResult(data);
-    } catch (err) {
-      setAdviceResult("Error generating advice. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadJobs = async () => {
-    setIsJobLoading(true);
-    const jobs = await fetchJobListings(jobCategory);
-    setJobList(jobs);
-    setIsJobLoading(false);
-  };
-
-  useEffect(() => {
-    if (activeTab === 'jobs' && jobList.length === 0) {
-      loadJobs();
-    }
-  }, [activeTab]);
-
-  return (
-    <div className="max-w-5xl mx-auto">
-      <div className="bg-gradient-to-r from-pink-600 to-rose-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <Briefcase className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">Career & Job Finder</h2>
-            <p className="text-pink-100">Find the latest Govt & Private jobs or get AI career guidance.</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex space-x-1 bg-white p-1 rounded-xl shadow-sm border border-slate-200 mb-6">
-        <button
-          onClick={() => setActiveTab('jobs')}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'jobs'
-              ? 'bg-pink-100 text-pink-700 shadow-sm'
-              : 'text-slate-600 hover:text-pink-600 hover:bg-pink-50'
-          }`}
-        >
-          <Building2 size={18} /> Job Alerts Board
-        </button>
-        <button
-          onClick={() => setActiveTab('advice')}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeTab === 'advice'
-              ? 'bg-pink-100 text-pink-700 shadow-sm'
-              : 'text-slate-600 hover:text-pink-600 hover:bg-pink-50'
-          }`}
-        >
-          <UserCheck size={18} /> Career Coach
-        </button>
-      </div>
-
-      {activeTab === 'jobs' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-4">
-             <div className="flex justify-between items-center mb-4">
-               <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                 <Bell size={20} className="text-pink-600"/> Latest Notifications
-               </h3>
-               <button 
-                onClick={loadJobs} 
-                disabled={isJobLoading}
-                className="text-sm flex items-center gap-1 text-pink-600 hover:text-pink-800"
-               >
-                 <RefreshCw size={14} className={isJobLoading ? "animate-spin" : ""} /> Refresh
-               </button>
-             </div>
-             
-             {isJobLoading ? (
-               <div className="flex justify-center py-10"><Loader2 className="animate-spin text-pink-500" size={32} /></div>
-             ) : (
-               <div className="space-y-4">
-                 {jobList.length === 0 && !isJobLoading && (
-                   <div className="text-center py-10 text-slate-500">
-                     No jobs found or connection error. Try refreshing.
-                   </div>
-                 )}
-                 {jobList.map((job, idx) => (
-                   <div key={idx} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                     <div className="flex-grow">
-                       <div className="flex items-center gap-2 mb-1">
-                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${job.type === 'Govt' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                           {job.type}
-                         </span>
-                         <span className="text-xs text-slate-500">{job.posted}</span>
-                       </div>
-                       <h4 className="font-bold text-slate-900 text-lg">{job.title}</h4>
-                       <p className="text-slate-600 text-sm font-medium">{job.company}</p>
-                       <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-slate-500">
-                         <span className="flex items-center gap-1"><Map size={14}/> {job.location}</span>
-                         <span className="flex items-center gap-1"><Landmark size={14}/> {job.salary}</span>
-                       </div>
-                       {job.tags && job.tags.length > 0 && (
-                          <div className="flex gap-2 mt-2">
-                            {job.tags.map(tag => (
-                              <span key={tag} className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full">{tag}</span>
-                            ))}
-                          </div>
-                       )}
-                     </div>
-                     <a 
-                       href={job.applyLink || '#'} 
-                       target="_blank" 
-                       rel="noopener noreferrer"
-                       className="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 flex items-center gap-2 shrink-0"
-                     >
-                       Apply <ExternalLink size={14} />
-                     </a>
-                   </div>
-                 ))}
-               </div>
-             )}
-          </div>
-
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-              <h3 className="font-bold text-slate-800 mb-4">Filter Jobs</h3>
-              <div className="space-y-2">
-                {['Both', 'Govt', 'Private'].map((cat) => (
-                   <label key={cat} className="flex items-center gap-2 cursor-pointer">
-                     <input 
-                      type="radio" 
-                      name="category" 
-                      className="text-pink-600 focus:ring-pink-500"
-                      checked={jobCategory === cat}
-                      onChange={() => setJobCategory(cat as any)}
-                     />
-                     <span className="text-sm text-slate-700">{cat} Jobs</span>
-                   </label>
-                ))}
-              </div>
-              <button onClick={loadJobs} className="mt-4 w-full bg-pink-100 text-pink-700 font-medium py-2 rounded-lg hover:bg-pink-200 text-sm">
-                Apply Filters
+              <button 
+                onClick={handleSave}
+                className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors"
+                title="Save"
+              >
+                <Save size={20} />
               </button>
             </div>
-
-            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-xl text-white shadow-md">
-              <h3 className="font-bold mb-2 flex items-center gap-2"><Bell size={18}/> Get Daily Alerts</h3>
-              <p className="text-xs text-slate-300 mb-4">Never miss a Govt or Private job update. Delivered to your inbox.</p>
-              <input type="email" placeholder="Enter your email" className="w-full p-2 rounded text-sm text-slate-900 outline-none mb-2" />
-              <button className="w-full bg-pink-600 hover:bg-pink-500 py-2 rounded font-medium text-sm">Subscribe</button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <form className="bg-white p-6 rounded-xl shadow-md border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="md:col-span-2 text-sm font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 mb-2">
-            Your Profile
-          </div>
-          <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Target Job Role <span className="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              required
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none"
-              placeholder="e.g. React Developer"
-              value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
-            />
-          </div>
-          <div className="md:col-span-1">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Experience Level</label>
-            <select 
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none bg-white"
-              value={formData.experience}
-              onChange={e => setFormData({...formData, experience: e.target.value})}
-            >
-              <option>Student / Fresher</option>
-              <option>1-3 Years</option>
-              <option>3-5 Years</option>
-              <option>5+ Years</option>
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">Key Skills <span className="text-red-500">*</span></label>
             <textarea 
-              required
-              rows={2}
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none resize-none"
-              placeholder="e.g. JavaScript, Python, Communication, Excel"
-              value={formData.skills}
-              onChange={e => setFormData({...formData, skills: e.target.value})}
+              className="flex-grow p-6 outline-none resize-none text-slate-700 leading-relaxed"
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              onBlur={handleSave}
+              placeholder="Start typing your notes here..."
             />
+          </>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-slate-400">
+            <StickyNote size={64} className="mb-4 opacity-20" />
+            <p>Select a note or create a new one.</p>
           </div>
-
-          <div className="md:col-span-2 mt-4">
-            <button 
-              type="button" 
-              onClick={handleAdviceSubmit}
-              disabled={loading}
-              className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 rounded-lg transition-all flex justify-center items-center gap-2 disabled:opacity-70 shadow-md hover:shadow-lg"
-            >
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Briefcase size={20} />}
-              {loading ? 'Thinking...' : 'Get AI Career Advice'}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {activeTab === 'advice' && adviceResult && (
-        <ResponseDisplay content={adviceResult} />
-      )}
+        )}
+      </div>
     </div>
   );
 };

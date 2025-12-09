@@ -1,5 +1,5 @@
 {
-  "name": "BharatWise AI",
-  "description": "An all-in-one AI platform for Indian students and job seekers, featuring study assistants, career guidance, and exam preparation tools.",
+  "name": "BharatWise Utility",
+  "description": "An all-in-one productivity platform for students featuring Attendance Calculator, Grade Predictor, Task Manager, and Notes.",
   "requestFramePermissions": []
 }
