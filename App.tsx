@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { AppView } from './types';
-import { AttendanceTool, CgpaCalculator, TaskManager, QuickNotes } from './components/FeatureComponents';
+import { AttendanceTool, CgpaCalculator, PomodoroTimer } from './components/FeatureComponents';
 import { 
   Menu, 
   X, 
   Layout, 
   CalendarCheck,
   Calculator,
-  ListTodo,
-  StickyNote
+  Timer
 } from 'lucide-react';
 
 const App = () => {
@@ -17,8 +16,7 @@ const App = () => {
 
   const navItems = [
     { id: AppView.HOME, label: 'Home', icon: <Layout size={20} /> },
-    { id: AppView.TASKS, label: 'Task Manager', icon: <ListTodo size={20} /> },
-    { id: AppView.NOTES, label: 'Quick Notes', icon: <StickyNote size={20} /> },
+    { id: AppView.POMODORO, label: 'Focus Timer', icon: <Timer size={20} /> },
     { id: AppView.ATTENDANCE, label: 'Attendance', icon: <CalendarCheck size={20} /> },
     { id: AppView.CGPA, label: 'CGPA Calc', icon: <Calculator size={20} /> },
   ];
@@ -112,15 +110,15 @@ const App = () => {
                 Welcome to <span className="text-primary">BharatWise</span>
               </h1>
               <p className="text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
-                Essential tools for student success without distractions. 
-                Track attendance, calculate grades, manage tasks, and take notes efficiently.
+                Essential tools for student success. 
+                Track attendance and maintain focus on your studies.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
                 <button 
-                  onClick={() => setActiveView(AppView.TASKS)}
+                  onClick={() => setActiveView(AppView.POMODORO)}
                   className="px-8 py-4 bg-primary text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all transform hover:-translate-y-1"
                 >
-                  Manage Tasks
+                  Start Focus Timer
                 </button>
                 <button 
                   onClick={() => setActiveView(AppView.ATTENDANCE)}
@@ -132,27 +130,16 @@ const App = () => {
             </div>
 
             {/* Feature Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div 
-                onClick={() => setActiveView(AppView.TASKS)}
+                onClick={() => setActiveView(AppView.POMODORO)}
                 className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer group"
               >
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition">
-                  <ListTodo size={24} />
+                <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center text-rose-600 mb-4 group-hover:scale-110 transition">
+                  <Timer size={24} />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Task Manager</h3>
-                <p className="text-slate-600">Prioritize your assignments and never miss a deadline again.</p>
-              </div>
-
-              <div 
-                onClick={() => setActiveView(AppView.NOTES)}
-                className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition cursor-pointer group"
-              >
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 mb-4 group-hover:scale-110 transition">
-                  <StickyNote size={24} />
-                </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Quick Notes</h3>
-                <p className="text-slate-600">Capture ideas and lecture points instantly.</p>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">Focus Timer</h3>
+                <p className="text-slate-600">Boost productivity with the strict Pomodoro technique.</p>
               </div>
 
               <div 
@@ -163,7 +150,7 @@ const App = () => {
                   <CalendarCheck size={24} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">Attendance Calc</h3>
-                <p className="text-slate-600">Calculate how many classes you can safely skip or need to attend.</p>
+                <p className="text-slate-600">Calculate safe bunks and attendance requirements.</p>
               </div>
 
               <div 
@@ -174,7 +161,7 @@ const App = () => {
                   <Calculator size={24} />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">CGPA Predictor</h3>
-                <p className="text-slate-600">Track your current grades and plan for your target CGPA.</p>
+                <p className="text-slate-600">Track your grades and forecast your results.</p>
               </div>
             </div>
           </div>
@@ -183,9 +170,8 @@ const App = () => {
         {/* Feature Views */}
         {activeView === AppView.ATTENDANCE && <AttendanceTool />}
         {activeView === AppView.CGPA && <CgpaCalculator />}
-        {activeView === AppView.TASKS && <TaskManager />}
-        {activeView === AppView.NOTES && <QuickNotes />}
-
+        {activeView === AppView.POMODORO && <PomodoroTimer />}
+        
       </main>
 
       {/* Footer */}

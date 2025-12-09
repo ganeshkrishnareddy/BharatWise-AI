@@ -2,21 +2,7 @@ export enum AppView {
   HOME = 'HOME',
   ATTENDANCE = 'ATTENDANCE',
   CGPA = 'CGPA',
-  TASKS = 'TASKS',
-  NOTES = 'NOTES'
+  POMODORO = 'POMODORO'
 }
 
-export interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
-  priority: 'Low' | 'Medium' | 'High';
-  createdAt: number;
-}
-
-export interface Note {
-  id: string;
-  title: string;
-  content: string;
-  updatedAt: number;
-}
+// Expense type removed as feature is deprecated

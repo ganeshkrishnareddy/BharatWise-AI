@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   CalendarCheck, UserCheck, AlertCircle, Plus, Trash2, 
-  Check, ListTodo, StickyNote, Save, Clock, X, Circle, CheckCircle, Loader2
+  Check, Calculator, Loader2, Timer, Play, Pause, RotateCcw, 
+  Maximize, Minimize
 } from 'lucide-react';
-import { Task, Note } from '../types';
-import { storageService } from '../services/storage';
+// Storage service no longer needed for current features
+// import { storageService } from '../services/storage';
 
 // --- Attendance Tool ---
 export const AttendanceTool = () => {
@@ -424,304 +425,176 @@ export const CgpaCalculator = () => {
   );
 };
 
-// --- Task Manager ---
-export const TaskManager = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [newTask, setNewTask] = useState('');
-  const [priority, setPriority] = useState<'Low' | 'Medium' | 'High'>('Medium');
+// --- Pomodoro Timer ---
+export const PomodoroTimer = () => {
+  const [minutes, setMinutes] = useState(25);
+  const [seconds, setSeconds] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [mode, setMode] = useState<'focus' | 'short' | 'long'>('focus');
+
+  // Enforce Fullscreen and Focus
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        resetTimer("Focus lost! Tab switched. Timer reset.");
+      }
+    };
+
+    // If user exits fullscreen manually (ESC), reset timer
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isActive) {
+        resetTimer("Focus mode exited. Timer reset.");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isActive]);
 
   useEffect(() => {
-    loadTasks();
-  }, []);
+    let interval: any = null;
+    if (isActive) {
+      interval = setInterval(() => {
+        if (seconds === 0) {
+          if (minutes === 0) {
+            clearInterval(interval);
+            resetTimer(); // Timer finished normally
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+            // Play notification sound here if desired
+            alert("Timer Finished!");
+          } else {
+            setMinutes(minutes - 1);
+            setSeconds(59);
+          }
+        } else {
+          setSeconds(seconds - 1);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, minutes, seconds]);
 
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const data = await storageService.getTasks();
-      setTasks(data);
-    } catch (e) {
-      console.error("Failed to load tasks", e);
-    } finally {
-      setLoading(false);
+  const switchMode = (newMode: 'focus' | 'short' | 'long') => {
+    setMode(newMode);
+    setIsActive(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setSeconds(0);
+    if (newMode === 'focus') setMinutes(25);
+    else if (newMode === 'short') setMinutes(5);
+    else setMinutes(15);
+  };
+
+  const toggleTimer = async () => {
+    if (!isActive) {
+      // Start Timer - Request Fullscreen
+      try {
+        await document.documentElement.requestFullscreen();
+        setIsActive(true);
+      } catch (err) {
+        console.error("Fullscreen denied:", err);
+        // We still start the timer, but maybe warn user?
+        setIsActive(true);
+      }
+    } else {
+      // Pause Timer
+      setIsActive(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
     }
   };
 
-  const addTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTask.trim()) return;
+  const resetTimer = (message?: string) => {
+    setIsActive(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     
-    const task: Task = {
-      id: Date.now().toString(),
-      text: newTask,
-      completed: false,
-      priority,
-      createdAt: Date.now()
-    };
+    setSeconds(0);
+    if (mode === 'focus') setMinutes(25);
+    else if (mode === 'short') setMinutes(5);
+    else setMinutes(15);
 
-    setTasks(prev => [task, ...prev]); // Optimistic update
-    setNewTask('');
-    await storageService.saveTask(task);
-    loadTasks(); // Refresh to sync
-  };
-
-  const toggleTask = async (task: Task) => {
-    const updated = { ...task, completed: !task.completed };
-    setTasks(tasks.map(t => t.id === task.id ? updated : t)); // Optimistic
-    await storageService.saveTask(updated);
-  };
-
-  const deleteTask = async (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id)); // Optimistic
-    await storageService.deleteTask(id);
+    if (message) {
+      alert(message);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8 shadow-lg">
+    <div className="max-w-xl mx-auto animate-fade-in">
+      <div className={`bg-gradient-to-r ${mode === 'focus' ? 'from-rose-500 to-pink-600' : 'from-teal-500 to-emerald-600'} rounded-2xl p-8 text-white mb-8 shadow-lg transition-colors duration-500`}>
         <div className="flex items-center gap-4 mb-4">
           <div className="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
-            <ListTodo className="w-8 h-8 text-white" />
+            <Timer className="w-8 h-8 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold">Task Manager</h2>
-            <p className="text-blue-100">Organize your assignments and study goals.</p>
+            <h2 className="text-2xl font-bold">Focus Timer</h2>
+            <p className="text-white/90">
+              {isActive ? "Strict Mode Active: Do not switch tabs." : "Stay productive with the Pomodoro technique."}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl shadow-md border border-slate-100 mb-6">
-        <form onSubmit={addTask} className="flex flex-col md:flex-row gap-3">
-          <input 
-            type="text"
-            className="flex-grow p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="Add a new task..."
-            value={newTask}
-            onChange={e => setNewTask(e.target.value)}
-          />
-          <select 
-            className="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-            value={priority}
-            onChange={(e: any) => setPriority(e.target.value)}
-          >
-            <option>Low</option>
-            <option>Medium</option>
-            <option>High</option>
-          </select>
+      <div className="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 flex flex-col items-center">
+        {/* Mode Switcher */}
+        <div className="flex p-1 bg-slate-100 rounded-xl mb-8">
           <button 
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold transition-colors disabled:opacity-50"
+            onClick={() => switchMode('focus')}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'focus' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-rose-500'}`}
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Add Task'}
+            Focus
           </button>
-        </form>
-      </div>
-
-      <div className="space-y-3">
-        {loading && tasks.length === 0 && (
-          <div className="text-center py-8">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-500" />
-            <p className="text-slate-400 mt-2">Loading tasks...</p>
-          </div>
-        )}
-        
-        {!loading && tasks.length === 0 && (
-          <div className="text-center text-slate-500 py-8 bg-white rounded-xl border border-slate-200 border-dashed">
-            No tasks yet. Start planning your success!
-          </div>
-        )}
-
-        {tasks.sort((a, b) => b.createdAt - a.createdAt).map(task => (
-          <div key={task.id} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${task.completed ? 'bg-slate-50 border-slate-200 opacity-75' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => toggleTask(task)}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 text-transparent hover:border-green-500'}`}
-              >
-                <Check size={14} />
-              </button>
-              <div>
-                <p className={`font-medium ${task.completed ? 'text-slate-500 line-through' : 'text-slate-800'}`}>
-                  {task.text}
-                </p>
-                <div className="flex gap-2 items-center text-xs mt-1">
-                  <span className={`px-2 py-0.5 rounded-full ${
-                    task.priority === 'High' ? 'bg-red-100 text-red-700' : 
-                    task.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {task.priority}
-                  </span>
-                  <span className="text-slate-400">{new Date(task.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            </div>
-            <button 
-              onClick={() => deleteTask(task.id)}
-              className="text-slate-400 hover:text-red-500 p-2"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// --- Quick Notes ---
-export const QuickNotes = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
-  
-  // Editor State
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  
-  // Debounce saving
-  const saveTimeoutRef = useRef<any>(null);
-
-  useEffect(() => {
-    loadNotes();
-  }, []);
-
-  const loadNotes = async () => {
-    setLoading(true);
-    try {
-      const data = await storageService.getNotes();
-      setNotes(data);
-    } catch(e) { console.error(e); } 
-    finally { setLoading(false); }
-  };
-
-  const createNote = () => {
-    const newNote = {
-      id: Date.now().toString(),
-      title: 'Untitled Note',
-      content: '',
-      updatedAt: Date.now()
-    };
-    setNotes([newNote, ...notes]);
-    setActiveNoteId(newNote.id);
-    setTitle(newNote.title);
-    setContent(newNote.content);
-    storageService.saveNote(newNote); // Save immediately
-  };
-
-  const selectNote = (note: Note) => {
-    setActiveNoteId(note.id);
-    setTitle(note.title);
-    setContent(note.content);
-  };
-
-  const handleSave = () => {
-    if (!activeNoteId) return;
-    
-    const updatedNote = {
-      id: activeNoteId,
-      title,
-      content,
-      updatedAt: Date.now()
-    };
-
-    setNotes(notes.map(n => n.id === activeNoteId ? updatedNote : n));
-    storageService.saveNote(updatedNote);
-  };
-
-  const deleteNote = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setNotes(notes.filter(n => n.id !== id));
-    if (activeNoteId === id) {
-      setActiveNoteId(null);
-      setTitle('');
-      setContent('');
-    }
-    await storageService.deleteNote(id);
-  };
-
-  return (
-    <div className="max-w-6xl mx-auto h-[calc(100vh-140px)] flex gap-6 animate-fade-in">
-      {/* Sidebar List */}
-      <div className="w-1/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-          <h3 className="font-bold text-slate-700 flex items-center gap-2">
-            <StickyNote size={20} className="text-amber-500"/> My Notes
-          </h3>
           <button 
-            onClick={createNote}
-            className="bg-amber-500 hover:bg-amber-600 text-white p-2 rounded-lg transition-colors"
+            onClick={() => switchMode('short')}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'short' ? 'bg-white text-teal-600 shadow-sm' : 'text-slate-500 hover:text-teal-500'}`}
           >
-            <Plus size={20} />
+            Short Break
+          </button>
+          <button 
+            onClick={() => switchMode('long')}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'long' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-blue-500'}`}
+          >
+            Long Break
           </button>
         </div>
-        <div className="flex-grow overflow-y-auto p-2 space-y-1">
-          {loading && <div className="text-center p-4 text-slate-400"><Loader2 className="animate-spin inline" /></div>}
-          
-          {!loading && notes.length === 0 && (
-            <div className="text-center text-slate-400 p-8 text-sm">No notes created yet.</div>
-          )}
-          
-          {notes.map(note => (
-            <div 
-              key={note.id}
-              onClick={() => selectNote(note)}
-              className={`p-3 rounded-lg cursor-pointer group flex justify-between items-start ${activeNoteId === note.id ? 'bg-amber-50 border border-amber-200' : 'hover:bg-slate-50 border border-transparent'}`}
-            >
-              <div>
-                <h4 className={`font-semibold text-sm truncate w-32 ${activeNoteId === note.id ? 'text-amber-800' : 'text-slate-700'}`}>{note.title}</h4>
-                <p className="text-xs text-slate-400 mt-1">{new Date(note.updatedAt).toLocaleDateString()}</p>
-              </div>
-              <button 
-                onClick={(e) => deleteNote(e, note.id)}
-                className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Editor Area */}
-      <div className="w-2/3 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-        {activeNoteId ? (
-          <>
-            <div className="p-4 border-b border-slate-100 flex gap-4 items-center">
-              <input 
-                type="text"
-                className="flex-grow text-xl font-bold text-slate-800 outline-none bg-transparent"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                onBlur={handleSave}
-                placeholder="Note Title"
-              />
-              <div className="text-xs text-slate-400 flex items-center gap-1">
-                <Clock size={12} /> {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-              </div>
-              <button 
-                onClick={handleSave}
-                className="text-emerald-600 hover:bg-emerald-50 p-2 rounded-lg transition-colors"
-                title="Save"
-              >
-                <Save size={20} />
-              </button>
-            </div>
-            <textarea 
-              className="flex-grow p-6 outline-none resize-none text-slate-700 leading-relaxed"
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              onBlur={handleSave}
-              placeholder="Start typing your notes here..."
-            />
-          </>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center text-slate-400">
-            <StickyNote size={64} className="mb-4 opacity-20" />
-            <p>Select a note or create a new one.</p>
+        {/* Timer Display */}
+        <div className="relative mb-8">
+          {/* Circular Progress (Visual only) */}
+          <div className="w-64 h-64 rounded-full border-8 border-slate-100 flex items-center justify-center relative">
+             <div 
+               className={`absolute inset-0 rounded-full border-8 ${mode === 'focus' ? 'border-rose-500' : 'border-teal-500'} opacity-20`}
+             ></div>
+             <div className="text-7xl font-bold text-slate-800 font-mono tracking-wider">
+               {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+             </div>
           </div>
-        )}
+        </div>
+
+        {/* Controls */}
+        <div className="flex gap-4">
+          <button 
+            onClick={toggleTimer}
+            className={`w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg transform active:scale-95 transition-all ${isActive ? 'bg-amber-500 hover:bg-amber-600' : (mode === 'focus' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-teal-500 hover:bg-teal-600')}`}
+          >
+            {isActive ? <Pause size={32} /> : <Play size={32} className="ml-1" />}
+          </button>
+          <button 
+            onClick={() => resetTimer()}
+            className="w-16 h-16 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center hover:bg-slate-200 transition-colors"
+          >
+            <RotateCcw size={24} />
+          </button>
+        </div>
+        <p className="mt-6 text-xs text-slate-400 text-center max-w-xs">
+          Starting the timer will enable Fullscreen. Switching tabs or exiting fullscreen will reset the timer to ensure focus.
+        </p>
       </div>
     </div>
   );
