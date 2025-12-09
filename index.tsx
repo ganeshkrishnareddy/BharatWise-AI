@@ -13,16 +13,11 @@ interface ErrorBoundaryState {
 
 // Error Boundary to catch runtime errors and prevent white screens
 class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public state: ErrorBoundaryState;
-
-  // Fix: Initialize props in constructor to satisfy TypeScript
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null
-    };
-  }
+  // Fix: Use property initializer for state to avoid constructor type conflicts
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null
+  };
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true, error };
